@@ -91,6 +91,47 @@ func main() {
 
 	fmt.Printf("Found a single document: %+v\n", result)
 
+	findOptions := options.Find()
+	findOptions.SetLimit(2)
+
+	var results []*Trainer
+
+	// Passing bson.D{{}} as the filter matches all documents in the collection
+	cur, err := collection.Find(context.TODO(), bson.D{{}}, findOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Iterate through the cursor allows us to decode documents at a time
+	for cur.Next(context.TODO()) {
+
+		// creates a value into which the single document can be decoded
+		var elem Trainer
+		err := cur.Decode(&elem)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		results = append(results, &elem)
+	}
+
+	if err := cur.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	cur.Close(context.TODO())
+
+	fmt.Printf("Found multiple documents (array of pointers): %+v\n", results)
+
+	fmt.Println("Data: ", *results[0])
+
+	deleteResult, err := collection.DeleteMany(context.TODO(), bson.D{{}})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("Deleted %v documents in the trainers collection\n", deleteResult.DeletedCount)
+
 	err = client.Disconnect(context.TODO())
 
 	if err != nil {
